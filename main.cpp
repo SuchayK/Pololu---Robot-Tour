@@ -1,21 +1,56 @@
-from pololu_3pi_2040_robot import robot
+#include <Wire.h>
+#include <Pololu3piPlus32U4.h>
+#include <PololuMenu.h>
 
-led = robot.YellowLED()
-encoders = robot.Encoders()
-display = robot.Display()
-buttonB = robot.ButtonB()
+#include <Pololu3piPlus32U4IMU.h>
 
-while True:
-    c = encoders.get_counts()
+#include <Hashtable.h> 
 
-    # change LED on every count
-    led((c[0] + c[1]) % 2)
+using namespace Pololu3piPlus32U4;
 
-    display.fill_rect(0, 0, 128, 18, 0)
-    display.text("Left: "+str(c[0]), 0, 0)
-    display.text("Right: "+str(c[1]), 0, 10)
-    display.text("Press B to reset", 0, 30)
-    display.show()
+OLED display;
 
-    if buttonB.check():
-        encoders.get_counts(reset = True)
+Encoders encoders;
+Buzzer buzzer;
+Motors motors;
+IMU imu;
+
+const int CLICKS_PER_ROTATION = 12;
+const float GEAR_RATIO = 29.86F;
+const float WHEEL_DIAMETER = 3.2;
+const float WHEEL_CIRCUMFERENCE = 10.05; //10.0531
+
+volatile int leftC = 0;
+volatile int rightC = 0;
+
+void forward(int speed, int duration) {
+  motors.setSpeeds(speed, speed);
+  delay(duration);
+  motors.setSpeeds(0, 0);
+}
+
+void turnRight(int speed, int duration) {
+  motors.setSpeeds(speed, -speed);
+  delay(duration);
+  motors.setSpeeds(0, 0);
+}
+
+void turnLeft(int speed, int duration) {
+  motors.setSpeeds(-speed, speed);
+  delay(duration);
+  motors.setSpeeds(0, 0);
+}
+
+void setup() {
+  Serial.begin(57600);
+  delay(1000);
+
+  forward(100, 2000);   
+  turnRight(100, 500);  
+  forward(100, 2000);   
+  turnLeft(100, 500);  
+}
+
+void loop() {
+  // Empty loop
+}
