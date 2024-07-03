@@ -279,165 +279,108 @@ void createMatrix() {
 
 }
 
+
 int hCost(int node) {
 
   return abs(node % 4 - endNode % 4) + abs(node / 4 - endNode / 4);
 
 }
 
-struct Node {
+void Path() {
 
-  int id, fCost;
-  Node(int i, int f) : id(i), fCost(f) {}
-  bool operator>(const Node& other) const { return fCost > other.fCost; }
+  for (int a = 1; a < gateCount + 2; a++) {
 
-};
+    endNode = endPoints[a];
+    startNode = endPoints[a - 1];
+    int parent[24];  
 
-int dx[] = {-1, 1, 0, 0};
-int dy[] = {0, 0, 1, -1};
+    for (int i = 0; i < 24; i++) {
 
-int heuristic(int current, int end) {
-
-  int cx = current / 4, cy = current % 4;
-  int ex = end / 4, ey = end % 4;
-  return std::abs(cx - ex) + std::abs(cy - ey);
-
-}
-
-void reconstructPath(const std::vector<int>& cameFrom, int current) {
-
-  std::vector<int> path;
-
-  while (current != -1) {
-
-    path.push_back(current);
-    current = cameFrom[current];
-
-  }
-
-  for (auto it = path.rbegin(); it != path.rend(); ++it) {
-
-    std::cout << *it << " ";
-
-  }
-
-  std::cout << std::endl;
-
-}
-
-void findPath(const std::vector<std::vector<int>>& adjMatrix, const std::vector<int>& endPoints) {
-  for (int i = 1; i < endPoints.size(); ++i) {
-
-    auto [startNode, endNode] = std::make_pair(endPoints[i - 1], endPoints[i]);
-        
-    std::unordered_set<int> explored;
-    std::vector<int> distances(GRID_SIZE, INF);
-    std::vector<int> estimatedTotalCost(GRID_SIZE, INF);
-    std::vector<int> predecessor(GRID_SIZE, -1);
-    
-    auto cmp = [](const Node& a, const Node& b) { return a > b; };
-    std::priority_queue<Node, std::vector<Node>, decltype(cmp)> frontier(cmp);
-
-    distances[startNode] = 0;
-    estimatedTotalCost[startNode] = heuristic(startNode, endNode);
-    frontier.emplace(startNode, estimatedTotalCost[startNode]);
-    
-    while (!frontier.empty()) {
-
-      int currentNode = frontier.top().id;
-      frontier.pop();
-      
-      if (currentNode == endNode) {
-
-        reconstructPath(predecessor, endNode);
-        break;
-
-      }
-      
-      if (explored.count(currentNode)) continue;
-
-      explored.insert(currentNode);
-      
-      for (int dir = 0; dir < DIRECTIONS; ++dir) {
-
-        int newX = currentNode / 4 + dx[dir];
-        int newY = currentNode % 4 + dy[dir];
-        int neighborNode = newX * 4 + newY;
-        
-        if (newX < 0 || newX >= 4 || newY < 0 || newY >= 4 || explored.count(neighborNode) || adjMatrix[currentNode][neighborNode] >= 0) {
-
-          continue;
-
-        }
-        
-        int newDistance = distances[currentNode] + std::abs(adjMatrix[currentNode][neighborNode]);
-        
-        if (newDistance < distances[neighborNode]) {
-
-          predecessor[neighborNode] = currentNode;
-          distances[neighborNode] = newDistance;
-          estimatedTotalCost[neighborNode] = distances[neighborNode] + heuristic(neighborNode, endNode);
-          frontier.emplace(neighborNode, estimatedTotalCost[neighborNode]);
-
-        }
-      }
+      parent[i] = -1;
 
     }
 
+    int currentNode = startNode;
+    bool openSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    bool closedSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    int fCostList[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    // int start = endPoints[i - 1];
-    // int end = endPoints[i];
-    
-    // std::vector<bool> closedSet(GRID_SIZE, false);
-    // std::vector<int> gScore(GRID_SIZE, INF);
-    // std::vector<int> fScore(GRID_SIZE, INF);
-    // std::vector<int> cameFrom(GRID_SIZE, -1);
-    
-    // std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
-    
-    // gScore[start] = 0;
-    // fScore[start] = heuristic(start, end);
-    // openSet.push(Node(start, fScore[start]));
-    
-    // while (!openSet.empty()) {
-    //   int current = openSet.top().id;
-    //   openSet.pop();
+    openSet[startNode] = 1;
+    route[routeCount-1] = startNode;
+    prevNode = startNode;
+
+    while (currentNode != endNode) {
+
+      int minCost = INF;
+
+      for (int i = 0; i < 16; i++) { 
+
+        if (openSet[i] == true) {
+
+          if (fCostList[i] <= minCost) {
+
+            minCost = fCostList[i];
+            currentNode = i;
+            Serial.println(minCost);
+
+          }
+
+        }
+
+      }
+
+      openSet[currentNode] = 0;  
+      closedSet[currentNode] = 1; 
+
+      if (currentNode == endNode) {
+
+        break;
+
+      }
+
+      if (currentNode > 3) {      
+                                                                                         
+        if (!(closedSet[currentNode - 4]) && adjMatrix[currentNode][currentNode - 4] < 0) {       
+ 
+          if (adjMatrix[currentNode][currentNode - 4] < fCostList[currentNode - 4] || !openSet[currentNode - 4]) { 
+
+            fCostList[currentNode - 4] = adjMatrix[currentNode][currentNode - 4] + hCost(currentNode - 4);
+            parent[currentNode - 4] = currentNode;
+
+            if (!openSet[currentNode - 4]) {
+
+              openSet[currentNode - 4] = true;
+
+            }
+
+          }
+
+        }
+
+      }
       
-    //   if (current == end) {
+      if (currentNode < 12) { 
+                                                                                        
+        if (!(closedSet[currentNode + 4]) && adjMatrix[currentNode][currentNode + 4] < 0) {       
 
-    //     reconstructPath(cameFrom, end);
-    //     break;
+          if (adjMatrix[currentNode][currentNode + 4] < fCostList[currentNode + 4] || !openSet[currentNode + 4]) { 
 
-    //   }
+            fCostList[currentNode + 4] = adjMatrix[currentNode][currentNode + 4] + hCost(currentNode + 4);
+            parent[currentNode + 4] = currentNode;
 
-    // }
+            if (!openSet[currentNode + 4]) {
 
-    // closedSet[current] = true;
-            
-    // for (int dir = 0; dir < DIRECTIONS; ++dir) {
+              openSet[currentNode + 4] = true;
 
-    //   int nx = current / 4 + dx[dir];
-    //   int ny = current % 4 + dy[dir];
-    //   int neighbor = nx * 4 + ny;
-      
-    //   if (nx < 0 || nx >= 4 || ny < 0 || ny >= 4 || closedSet[neighbor] || adjMatrix[current][neighbor] >= 0) {
+            }
 
-    //     continue;
+          }
 
-    //   }
-      
-    //   int tentativeGScore = gScore[current] + std::abs(adjMatrix[current][neighbor]);
-      
-    //   if (tentativeGScore < gScore[neighbor]) {
+        }
 
-    //     cameFrom[neighbor] = current;
-    //     gScore[neighbor] = tentativeGScore;
-    //     fScore[neighbor] = gScore[neighbor] + heuristic(neighbor, end);
-    //     openSet.push(Node(neighbor, fScore[neighbor]));
+      }
 
-    //   }
-
-    // }
+    }
 
   }
 
