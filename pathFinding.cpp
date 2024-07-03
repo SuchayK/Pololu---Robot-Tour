@@ -110,12 +110,77 @@ void printPath(int parent[], int node) {
           break;
 
         default:
-        
+
           Serial.println(node-prevNode);
           break;
       }
       orientation = 1; //right
       break;
 
+    case -4://up
+      switch(orientation){
+        case 0:
+          distance[functionCount-1] += distanceAdditive;    
+          functionCount--;
+          break;
+        case 1:
+          functionArray[functionCount] = turn_left;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        case 2:
+          functionArray[functionCount] = fullTurn;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        case 3:
+          functionArray[functionCount] = turn_right;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        default:
+          Serial.println(node-prevNode);
+          break;
+      }
+      orientation = 0;
+      break;
+    case 4:
+      switch(orientation){
+        case 0:
+          functionArray[functionCount] = fullTurn;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        case 1:
+          functionArray[functionCount] = turn_right;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        case 2:
+          distance[functionCount-1] += distanceAdditive;  
+          functionCount--;
+          break;
+        case 3:
+          functionArray[functionCount] = turn_left;
+          functionArray[functionCount+1] = go_fwd;
+          functionCount++;
+          break;
+        default:
+          Serial.println(node-prevNode);
+          break;        
+      }
+      orientation = 2;
+      break;
+    default:
+      Serial.println(node-prevNode);
+      break;
   }
+  if (node == endPoints[gateCount + 1]){ /
+    functionArray[functionCount+1] = go_bck;
+    functionCount++;
+    distance[functionCount] = 13;
+  }
+  prevNode = node;
+  functionCount++; 
 }
+
