@@ -1,10 +1,13 @@
 #include <queue>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 const int INF = 1e9;
 const int GRID_SIZE = 16;
 const int DIRECTIONS = 4;
+const int MAX_ROUTE = 100;
+const int MAX_FUNCTIONS = 200;
 
 int functionCount = 1;
 void (*functionArray[50])();  
@@ -12,21 +15,16 @@ int distance[50];
 int prevNode = -1;
 
 void map() {  
-
   functionArray[0] = go_fwd;
   distance[0] = 11.5+25;
   for (int i = 1; i < 50; i++) {
     functionArray[i] = stop_Stop;
     distance[i] = 45;
   }
-
 }
 
 enum class Orientation { North, East, South, West };
 enum class Direction { Left = -1, Right = 1, Up = -4, Down = 4 };
-
-const int MAX_ROUTE = 100;
-const int MAX_FUNCTIONS = 200;
 
 std::array<int, MAX_ROUTE> route;
 int routeCount = 0;
@@ -76,7 +74,7 @@ void handleMovement(Direction dir) {
     }};
 
     int orientationIndex = static_cast<int>(currentOrientation);
-    int directionIndex = (static_cast<int>(dir) + 5) % 4;  // Map -4, -1, 1, 4 to 0, 1, 2, 3
+    int directionIndex = (static_cast<int>(dir) + 5) % 4;
 
     if (movementMatrix[orientationIndex][directionIndex] == go_forward) {
         addMovement(nullptr, distanceIncrement);
@@ -106,253 +104,170 @@ void reconstructPath(const int parent[], int node, const std::array<int, MAX_ROU
     }
 }
 
-
 bool adjMatrix[16][16];
 
 void createMatrix() {
-
   for (int a = 0; a < 16; a++) {
-
     for (int b = 0; b < 16; b++) {
-
       adjMatrix[a][b] = 1;
-
     }
-
   }
 
   for (int a = 0; a < 16; a++) {
-
     int i = a / 4;
     int j = a % 4;
     String str = maze[i][j];
     int w = 0;       
 
     if (str.indexOf('G') >= 0) {  
-
       w = -16;            
-
     }
-    if (str.indexOf('T') < 0 && i > 0) {  //IF THERE IS NO TOP BARRIER && IS NOT IN THE TOP ROW
-
+    if (str.indexOf('T') < 0 && i > 0) {
       adjMatrix[4 * (i - 1) + j][4 * i + j] = w;
-
-      if (maze[i - 1][j].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
-
+      if (maze[i - 1][j].indexOf('G') >= 0) {
         adjMatrix[4 * (i - 1) + j][4 * i + j] = -16;
-
       }
-
     }
-    if (str.indexOf('B') < 0 && i < 3) {  // IF THERE IS NO BOTTOM BARRIER && IS NOT IN THE BOTTOM ROW
-
+    if (str.indexOf('B') < 0 && i < 3) {
       adjMatrix[4 * (i + 1) + j][4 * i + j] = w;
-
-      if (maze[i + 1][j].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
-
+      if (maze[i + 1][j].indexOf('G') >= 0) {
         adjMatrix[4 * (i + 1) + j][4 * i + j] = -16;
-
       }
-
     }
-    if (str.indexOf('L') < 0 && j > 0) {  //IF THERE IS NO LEFT BARRIER && IS NOT IN THE LEFT-MOST COLUMN
-
+    if (str.indexOf('L') < 0 && j > 0) {
       adjMatrix[4 * i + j][4 * i + j - 1] = w;
-
-      if (maze[i][j - 1].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
-
+      if (maze[i][j - 1].indexOf('G') >= 0) {
         adjMatrix[4 * i + j][4 * i + j - 1] = -16;
-
       }
-
     }
-
-    if (str.indexOf('R') < 0 && j < 3) {  // IF THERE IS NO RIGHT BARRIER && IS NOT IN THE RIGHT MOST COLUMN
-
+    if (str.indexOf('R') < 0 && j < 3) {
       adjMatrix[4 * i + j][4 * i + j + 1] = w;
-
-      if (maze[i][j + 1].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
-
+      if (maze[i][j + 1].indexOf('G') >= 0) {
         adjMatrix[4 * i + j][4 * i + j + 1] = -16;
-
       }
-
     }
-
   }
 
-    for (int a = 0; a < 16; a++) {
-
-        for (int b = 0; b < 16; b++) {
-
-            Serial.print(adjMatrix[a][b]);
-            Serial.print("\t");
-
-        }
-
-    Serial.println("");//DEBUG CHECKING
+  for (int a = 0; a < 16; a++) {
+    for (int b = 0; b < 16; b++) {
+      Serial.print(adjMatrix[a][b]);
+      Serial.print("\t");
     }
-
+    Serial.println("");
+  }
 }
-
 
 int hCost(int node) {
-
   return abs(node % 4 - endNode % 4) + abs(node / 4 - endNode / 4);
-
 }
 
-void Path() {
+int improvedHCost(int node, int endNode) {
+    int dx = abs(node % 4 - endNode % 4);
+    int dy = abs(node / 4 - endNode / 4);
+    return (dx + dy) + (141 * std::min(dx, dy)) / 100;
+}
 
-  for (int a = 1; a < gateCount + 2; a++) {
+std::vector<int> bidirectionalAStar(int start, int end) {
+    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> openSetForward, openSetBackward;
+    std::vector<int> gScoreForward(16, INF), gScoreBackward(16, INF);
+    std::vector<int> parentForward(16, -1), parentBackward(16, -1);
+    std::vector<bool> closedSetForward(16, false), closedSetBackward(16, false);
 
-    endNode = endPoints[a];
-    startNode = endPoints[a - 1];
-    int parent[16];  
+    openSetForward.push({0, start});
+    openSetBackward.push({0, end});
+    gScoreForward[start] = 0;
+    gScoreBackward[end] = 0;
 
-    for (int i = 0; i < 16; i++) {
+    while (!openSetForward.empty() && !openSetBackward.empty()) {
+        int currentForward = openSetForward.top().second;
+        int currentBackward = openSetBackward.top().second;
 
-      parent[i] = -1;
+        if (closedSetForward[currentBackward] || closedSetBackward[currentForward]) {
+            return reconstructBidirectionalPath(parentForward, parentBackward, currentForward, currentBackward);
+        }
 
+        openSetForward.pop();
+        openSetBackward.pop();
+
+        closedSetForward[currentForward] = true;
+        closedSetBackward[currentBackward] = true;
+
+        for (int dir = 0; dir < DIRECTIONS; ++dir) {
+            int nextForward = getNeighbor(currentForward, dir);
+            if (nextForward != -1 && !closedSetForward[nextForward] && adjMatrix[currentForward][nextForward] < 0) {
+                int tentativeGScore = gScoreForward[currentForward] + (-adjMatrix[currentForward][nextForward]);
+                if (tentativeGScore < gScoreForward[nextForward]) {
+                    parentForward[nextForward] = currentForward;
+                    gScoreForward[nextForward] = tentativeGScore;
+                    int fScore = tentativeGScore + improvedHCost(nextForward, end);
+                    openSetForward.push({fScore, nextForward});
+                }
+            }
+        }
+
+        for (int dir = 0; dir < DIRECTIONS; ++dir) {
+            int nextBackward = getNeighbor(currentBackward, dir);
+            if (nextBackward != -1 && !closedSetBackward[nextBackward] && adjMatrix[nextBackward][currentBackward] < 0) {
+                int tentativeGScore = gScoreBackward[currentBackward] + (-adjMatrix[nextBackward][currentBackward]);
+                if (tentativeGScore < gScoreBackward[nextBackward]) {
+                    parentBackward[nextBackward] = currentBackward;
+                    gScoreBackward[nextBackward] = tentativeGScore;
+                    int fScore = tentativeGScore + improvedHCost(nextBackward, start);
+                    openSetBackward.push({fScore, nextBackward});
+                }
+            }
+        }
     }
 
-    int currentNode = startNode;
-    bool openSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    bool closedSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    int fCostList[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    return {};
+}
 
-    openSet[startNode] = 0;
-    route[routeCount-2] = startNode;
-    prevNode = startNode;
-
-    while (currentNode != endNode) {
-
-      int minCost = INF;
-
-      for (int i = 0; i < 16; i++) { 
-
-        if (openSet[i] == true) {
-
-          if (fCostList[i] <= minCost) {
-
-            minCost = fCostList[i];
-            currentNode = i;
-            Serial.println(minCost);
-
-          }
-
-        }
-
-      }
-
-      openSet[currentNode] = 0;  
-      closedSet[currentNode] = 1; 
-
-      if (currentNode == endNode) {
-
-        break;
-
-      }
-
-      if (currentNode > 3) {      
-                                                                                         
-        if (!(closedSet[currentNode - 4]) && adjMatrix[currentNode][currentNode - 4] < 0) {       
- 
-          if (adjMatrix[currentNode][currentNode - 4] < fCostList[currentNode - 4] || !openSet[currentNode - 4]) { 
-
-            fCostList[currentNode - 4] = adjMatrix[currentNode][currentNode - 4] + hCost(currentNode - 4);
-            parent[currentNode - 4] = currentNode;
-
-            if (!openSet[currentNode - 4]) {
-
-              openSet[currentNode - 4] = true;
-
-            }
-
-          }
-
-        }
-
-      }
-      
-      if (currentNode < 10) { 
-                                                                                        
-        if (!(closedSet[currentNode + 4]) && adjMatrix[currentNode][currentNode + 4] < 0) {       
-
-          if (adjMatrix[currentNode][currentNode + 4] < fCostList[currentNode + 4] || !openSet[currentNode + 4]) { 
-
-            fCostList[currentNode + 4] = adjMatrix[currentNode][currentNode + 4] + hCost(currentNode + 4);
-            parent[currentNode + 4] = currentNode;
-
-            if (!openSet[currentNode + 4]) {
-
-              openSet[currentNode + 4] = true;
-
-            }
-
-          }
-
-        }
-
-      }
-
-      if (currentNode % 4 < 3) {     
-                                                                                   
-        if (!(closedSet[currentNode + 1]) && adjMatrix[currentNode][currentNode + 1] < 0) {                         
-
-          if (adjMatrix[currentNode][currentNode + 1] < fCostList[currentNode + 1] || !openSet[currentNode + 1]) { 
-
-            fCostList[currentNode + 1] = adjMatrix[currentNode][currentNode + 1] + hCost(currentNode + 1);
-            parent[currentNode + 1] = currentNode;
-
-            if (!openSet[currentNode + 1]) {
-
-              openSet[currentNode + 1] = true;
-
-            }
-
-          }
-
-        }
-
-      }
-
-      if (currentNode % 4 > 0) {                
-                                                                    
-        if (!(closedSet[currentNode - 1]) && adjMatrix[currentNode][currentNode - 1] < 0) {           
-         
-          if (adjMatrix[currentNode][currentNode - 1] < fCostList[currentNode - 1] || !openSet[currentNode - 1]) { 
-            
-            fCostList[currentNode - 1] = adjMatrix[currentNode][currentNode - 1] + hCost(currentNode - 1);
-            parent[currentNode - 1] = currentNode;
-
-            if (!openSet[currentNode - 1]) {
-
-              openSet[currentNode - 1] = true;
-
-            }
-
-          }
-
-        }
-
-      }
-
+std::vector<int> reconstructBidirectionalPath(const std::vector<int>& parentForward, const std::vector<int>& parentBackward, int meetingPoint, int end) {
+    std::vector<int> path;
+    for (int node = meetingPoint; node != -1; node = parentForward[node]) {
+        path.push_back(node);
     }
-
-    if (currentNode == endNode) {
-
-      Serial.print("Path: ");
-      printPath(parent, endNode);
-
+    std::reverse(path.begin(), path.end());
+    for (int node = parentBackward[meetingPoint]; node != -1; node = parentBackward[node]) {
+        path.push_back(node);
     }
+    return path;
+}
 
-  }
+int getNeighbor(int node, int direction) {
+    switch (direction) {
+        case 0: return (node > 3) ? node - 4 : -1;
+        case 1: return (node < 12) ? node + 4 : -1;
+        case 2: return (node % 4 < 3) ? node + 1 : -1;
+        case 3: return (node % 4 > 0) ? node - 1 : -1;
+        default: return -1;
+    }
+}
 
+void improvedPath() {
+    for (int a = 1; a < gateCount + 2; a++) {
+        endNode = endPoints[a];
+        startNode = endPoints[a - 1];
+
+        std::vector<int> path = bidirectionalAStar(startNode, endNode);
+
+        if (!path.empty()) {
+            Serial.print("Path: ");
+            for (int i = 0; i < path.size() - 1; ++i) {
+                logMovement(path[i], path[i + 1]);
+                Direction moveDirection = static_cast<Direction>(path[i + 1] - path[i]);
+                handleMovement(moveDirection);
+            }
+            if (endNode == endPoints[gateCount + 1]) {
+                addMovement(go_backward, 13);
+            }
+        } else {
+            Serial.println("No path found!");
+        }
+    }
 }
 
 void setup() {
-
   init_GPIO();
   Serial.begin(115200);
   delay(500);
@@ -361,78 +276,51 @@ void setup() {
   Wire.begin();
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true);
-  //SETTING THE INITIAL ANGLE
   mpu6050.update();
   fAngle = mpu6050.getAngleZ();
   init_angle = fAngle;
 
   createMatrix();
   emptyFunction();
-  Serial.println("got here");
-  Path();
+  Serial.println("Starting improved pathfinding");
+  improvedPath();
 
   for(int i = 0; i < 50; i++){
-
     currentDistance = distance[i];
     functionArray[i]();
-
     if (functionArray[i] == stop_Stop){
-
       break;
-
     }
-
     Serial.println("");
-
   }
 
   for (int i = 0 ; i < 50; i++){
-
     currentDistance = distance[i];
-
-      if (functionArray[i] == go_fwd) {
-
+    if (functionArray[i] == go_fwd) {
       Serial.print("Going fwd ");
-
     } else if (functionArray[i] == turn_right) {
-
       Serial.print("Turning right ");
-
     } else if (functionArray[i] == turn_left) {
-
       Serial.print("Turning left ");
-
     } else if (functionArray[i] == fullTurn) {
-
       Serial.print("Full Turn");
-
     } else if (functionArray[i] == stop_Stop){
-
       Serial.print("Stop");
-
-    }e lse{
-
+    } else {
       Serial.print("Else");
-
     }
-
     Serial.println(currentDistance);
-
   }
 
-    Serial.println("finished");
-
+  Serial.println("finished");
   delay(5000);
-
 }
 
 void loop() {
-
   mpu6050.update();
   angle = mpu6050.getAngleZ();
   mpu6050.update();
   angle = mpu6050.getAngleZ();
   currentDistance = distance[step];
   functionArray[step]();
-
 }
