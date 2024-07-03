@@ -1,3 +1,10 @@
+#include <queue>
+#include <vector>
+#include <cmath>
+
+const int INF = 1e9;
+const int GRID_SIZE = 16;
+const int DIRECTIONS = 4;
 
 int functionCount = 1;
 void (*functionArray[50])();  
@@ -278,29 +285,25 @@ int hCost(int node) {
 
 }
 
-void Path() {
+struct Node {
+    int id, fCost;
+    Node(int i, int f) : id(i), fCost(f) {}
+    bool operator>(const Node& other) const { return fCost > other.fCost; }
+};
 
-  for (int a = 1; a < gateCount + 2; a++) {
+int dx[] = {-1, 1, 0, 0};
+int dy[] = {0, 0, 1, -1};
 
-    endNode = endPoints[a];
-    startNode = endPoints[a - 1];
-    int parent[24];  
+int heuristic(int current, int end) {
+    int cx = current / 4, cy = current % 4;
+    int ex = end / 4, ey = end % 4;
+    return std::abs(cx - ex) + std::abs(cy - ey);
+}
 
-    for (int i = 0; i < 24; i++) {
-
-      parent[i] = -1;
-
+void reconstructPath(const std::vector<int>& cameFrom, int current) {
+    std::vector<int> path;
+    while (current != -1) {
+        path.push_back(current);
+        current = cameFrom[current];
     }
-
-    int currentNode = startNode;
-    bool openSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    bool closedSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    int fCostList[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    openSet[startNode] = 1;
-    route[routeCount-1] = startNode;
-    prevNode = startNode;
-
-  }
-
 }
