@@ -327,30 +327,118 @@ void reconstructPath(const std::vector<int>& cameFrom, int current) {
 
 void findPath(const std::vector<std::vector<int>>& adjMatrix, const std::vector<int>& endPoints) {
   for (int i = 1; i < endPoints.size(); ++i) {
-    int start = endPoints[i - 1];
-    int end = endPoints[i];
-    
-    std::vector<bool> closedSet(GRID_SIZE, false);
-    std::vector<int> gScore(GRID_SIZE, INF);
-    std::vector<int> fScore(GRID_SIZE, INF);
-    std::vector<int> cameFrom(GRID_SIZE, -1);
-    
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
-    
-    gScore[start] = 0;
-    fScore[start] = heuristic(start, end);
-    openSet.push(Node(start, fScore[start]));
-    
-    while (!openSet.empty()) {
-      int current = openSet.top().id;
-      openSet.pop();
-      
-      if (current == end) {
 
-        reconstructPath(cameFrom, end);
+    auto [startNode, endNode] = std::make_pair(endPoints[i - 1], endPoints[i]);
+        
+    std::unordered_set<int> explored;
+    std::vector<int> distances(GRID_SIZE, INF);
+    std::vector<int> estimatedTotalCost(GRID_SIZE, INF);
+    std::vector<int> predecessor(GRID_SIZE, -1);
+    
+    auto cmp = [](const Node& a, const Node& b) { return a > b; };
+    std::priority_queue<Node, std::vector<Node>, decltype(cmp)> frontier(cmp);
+
+    distances[startNode] = 0;
+    estimatedTotalCost[startNode] = heuristic(startNode, endNode);
+    frontier.emplace(startNode, estimatedTotalCost[startNode]);
+    
+    while (!frontier.empty()) {
+
+      int currentNode = frontier.top().id;
+      frontier.pop();
+      
+      if (currentNode == endNode) {
+
+        reconstructPath(predecessor, endNode);
         break;
 
       }
+      
+      if (explored.count(currentNode)) continue;
+
+      explored.insert(currentNode);
+      
+      for (int dir = 0; dir < DIRECTIONS; ++dir) {
+
+        int newX = currentNode / 4 + dx[dir];
+        int newY = currentNode % 4 + dy[dir];
+        int neighborNode = newX * 4 + newY;
+        
+        if (newX < 0 || newX >= 4 || newY < 0 || newY >= 4 || explored.count(neighborNode) || adjMatrix[currentNode][neighborNode] >= 0) {
+
+          continue;
+
+        }
+        
+        int newDistance = distances[currentNode] + std::abs(adjMatrix[currentNode][neighborNode]);
+        
+        if (newDistance < distances[neighborNode]) {
+
+          predecessor[neighborNode] = currentNode;
+          distances[neighborNode] = newDistance;
+          estimatedTotalCost[neighborNode] = distances[neighborNode] + heuristic(neighborNode, endNode);
+          frontier.emplace(neighborNode, estimatedTotalCost[neighborNode]);
+
+        }
+      }
+
     }
+
+
+    // int start = endPoints[i - 1];
+    // int end = endPoints[i];
+    
+    // std::vector<bool> closedSet(GRID_SIZE, false);
+    // std::vector<int> gScore(GRID_SIZE, INF);
+    // std::vector<int> fScore(GRID_SIZE, INF);
+    // std::vector<int> cameFrom(GRID_SIZE, -1);
+    
+    // std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
+    
+    // gScore[start] = 0;
+    // fScore[start] = heuristic(start, end);
+    // openSet.push(Node(start, fScore[start]));
+    
+    // while (!openSet.empty()) {
+    //   int current = openSet.top().id;
+    //   openSet.pop();
+      
+    //   if (current == end) {
+
+    //     reconstructPath(cameFrom, end);
+    //     break;
+
+    //   }
+
+    // }
+
+    // closedSet[current] = true;
+            
+    // for (int dir = 0; dir < DIRECTIONS; ++dir) {
+
+    //   int nx = current / 4 + dx[dir];
+    //   int ny = current % 4 + dy[dir];
+    //   int neighbor = nx * 4 + ny;
+      
+    //   if (nx < 0 || nx >= 4 || ny < 0 || ny >= 4 || closedSet[neighbor] || adjMatrix[current][neighbor] >= 0) {
+
+    //     continue;
+
+    //   }
+      
+    //   int tentativeGScore = gScore[current] + std::abs(adjMatrix[current][neighbor]);
+      
+    //   if (tentativeGScore < gScore[neighbor]) {
+
+    //     cameFrom[neighbor] = current;
+    //     gScore[neighbor] = tentativeGScore;
+    //     fScore[neighbor] = gScore[neighbor] + heuristic(neighbor, end);
+    //     openSet.push(Node(neighbor, fScore[neighbor]));
+
+    //   }
+
+    // }
+
   }
+
 }
