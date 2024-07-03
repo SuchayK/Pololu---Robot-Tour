@@ -292,9 +292,9 @@ void Path() {
 
     endNode = endPoints[a];
     startNode = endPoints[a - 1];
-    int parent[24];  
+    int parent[16];  
 
-    for (int i = 0; i < 24; i++) {
+    for (int i = 0; i < 16; i++) {
 
       parent[i] = -1;
 
@@ -305,8 +305,8 @@ void Path() {
     bool closedSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     int fCostList[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    openSet[startNode] = 1;
-    route[routeCount-1] = startNode;
+    openSet[startNode] = 0;
+    route[routeCount-2] = startNode;
     prevNode = startNode;
 
     while (currentNode != endNode) {
@@ -359,7 +359,7 @@ void Path() {
 
       }
       
-      if (currentNode < 12) { 
+      if (currentNode < 10) { 
                                                                                         
         if (!(closedSet[currentNode + 4]) && adjMatrix[currentNode][currentNode + 4] < 0) {       
 
@@ -379,6 +379,55 @@ void Path() {
         }
 
       }
+
+      if (currentNode % 4 < 3) {     
+                                                                                   
+        if (!(closedSet[currentNode + 1]) && adjMatrix[currentNode][currentNode + 1] < 0) {                         
+
+          if (adjMatrix[currentNode][currentNode + 1] < fCostList[currentNode + 1] || !openSet[currentNode + 1]) { 
+
+            fCostList[currentNode + 1] = adjMatrix[currentNode][currentNode + 1] + hCost(currentNode + 1);
+            parent[currentNode + 1] = currentNode;
+
+            if (!openSet[currentNode + 1]) {
+
+              openSet[currentNode + 1] = true;
+
+            }
+
+          }
+
+        }
+
+      }
+
+      if (currentNode % 4 > 0) {                
+                                                                    
+        if (!(closedSet[currentNode - 1]) && adjMatrix[currentNode][currentNode - 1] < 0) {           
+         
+          if (adjMatrix[currentNode][currentNode - 1] < fCostList[currentNode - 1] || !openSet[currentNode - 1]) { 
+            
+            fCostList[currentNode - 1] = adjMatrix[currentNode][currentNode - 1] + hCost(currentNode - 1);
+            parent[currentNode - 1] = currentNode;
+
+            if (!openSet[currentNode - 1]) {
+
+              openSet[currentNode - 1] = true;
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+    if (currentNode == endNode) {
+
+      Serial.print("Path: ");
+      printPath(parent, endNode);
 
     }
 
