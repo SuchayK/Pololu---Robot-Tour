@@ -434,3 +434,89 @@ void Path() {
   }
 
 }
+
+void setup() {
+
+  init_GPIO();
+  Serial.begin(115200);
+  delay(500);
+  attachInterrupt(digitalPinToInterrupt(encoder1), count, RISING);
+  attachInterrupt(digitalPinToInterrupt(encoder2), count2, RISING);
+  Wire.begin();
+  mpu6050.begin();
+  mpu6050.calcGyroOffsets(true);
+  //SETTING THE INITIAL ANGLE
+  mpu6050.update();
+  fAngle = mpu6050.getAngleZ();
+  init_angle = fAngle;
+
+  createMatrix();
+  emptyFunction();
+  Serial.println("got here");
+  Path();
+
+  for(int i = 0; i < 50; i++){
+
+    currentDistance = distance[i];
+    functionArray[i]();
+
+    if (functionArray[i] == stop_Stop){
+
+      break;
+
+    }
+
+    Serial.println("");
+
+  }
+
+  for (int i = 0 ; i < 50; i++){
+
+    currentDistance = distance[i];
+
+      if (functionArray[i] == go_fwd) {
+
+      Serial.print("Going fwd ");
+
+    } else if (functionArray[i] == turn_right) {
+
+      Serial.print("Turning right ");
+
+    } else if (functionArray[i] == turn_left) {
+
+      Serial.print("Turning left ");
+
+    } else if (functionArray[i] == fullTurn) {
+
+      Serial.print("Full Turn");
+
+    } else if (functionArray[i] == stop_Stop){
+
+      Serial.print("Stop");
+
+    }e lse{
+
+      Serial.print("Else");
+
+    }
+
+    Serial.println(currentDistance);
+
+  }
+
+    Serial.println("finished");
+
+  delay(5000);
+
+}
+
+void loop() {
+
+  mpu6050.update();
+  angle = mpu6050.getAngleZ();
+  mpu6050.update();
+  angle = mpu6050.getAngleZ();
+  currentDistance = distance[step];
+  functionArray[step]();
+
+}
