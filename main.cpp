@@ -1,15 +1,12 @@
 #include <Wire.h>
 #include <Pololu3piPlus32U4.h>
 #include <PololuMenu.h>
-
 #include <Pololu3piPlus32U4IMU.h>
-
 #include <Hashtable.h> 
 
 using namespace Pololu3piPlus32U4;
 
 OLED display;
-
 Encoders encoders;
 Buzzer buzzer;
 Motors motors;
@@ -18,7 +15,7 @@ IMU imu;
 const int CLICKS_PER_ROTATION = 12;
 const float GEAR_RATIO = 29.86F;
 const float WHEEL_DIAMETER = 3.2;
-const float WHEEL_CIRCUMFERENCE = 10.05; //10.0531
+const float WHEEL_CIRCUMFERENCE = 10.05;
 
 volatile int leftC = 0;
 volatile int rightC = 0;
@@ -27,6 +24,56 @@ float leprev = 0;
 float leintegral = 0;
 float reprev = 0;
 float reintegral = 0;
+
+const int32_t turnAngle45 = 0x20000000;
+const int32_t turnAngle90 = turnAngle45 * 2;
+const int32_t turnAngle1 = (turnAngle45 + 22) / 45;
+uint32_t turnAngle = 0;
+int16_t turnRate;
+int16_t gyroOffset;
+uint16_t gyroLastUpdate = 0;
+
+float x = 0, y = 0, theta = 0;
+float leftDistance = 0, rightDistance = 0;
+const float WHEEL_BASE = 8.5;
+
+void turnSensorReset() {
+  gyroLastUpdate = micros();
+  turnAngle = 0;
+}
+
+void turnSensorUpdate() {
+  imu.readGyro();
+  turnRate = imu.g.z - gyroOffset;
+  uint16_t m = micros();
+  uint16_t dt = m - gyroLastUpdate;
+  gyroLastUpdate = m;
+  int32_t d = (int32_t)turnRate * dt;
+  turnAngle += (int64_t)d * 14680064 / 17578125;
+}
+
+void turnSensorSetup() {
+  Wire.begin();
+  imu.init();
+  imu.enableDefault();
+  imu.configureForTurnSensing();
+  display.clear();
+  display.print(F("Gyro cal"));
+  ledYellow(1);
+  delay(500);
+  int32_t total = 0;
+  for (uint16_t i = 0; i < 1024; i++) {
+    while(!imu.gyroDataReady()) {}
+    imu.readGyro();
+    total += imu.g.z;
+  }
+  ledYellow(0);
+  gyroOffset = total / 1024;
+  display.clear();
+  turnSensorReset();
+  turnSensorUpdate();
+  display.clear();
+}
 
 void movePID(int target) {
   float kp = 0.1;
@@ -86,6 +133,9 @@ void movePID(int target) {
     display.gotoXY(0, 1);
     display.print("R:");
     display.print(rightC);
+
+    updateOdometry();
+
   }
 
   motors.setSpeeds(0, 0);
@@ -175,9 +225,11 @@ void rightPID() {
     display.print(F("   "));
 
     // print diff in encoders
-    // display.gotoXY(0, 0);
-    // display.print(diff);
-    // display.print(F("   "));
+    display.gotoXY(0, 0);
+    display.print(diff);
+    display.print(F("   "));
+
+    updateOdometry();
 
   }
 
@@ -277,9 +329,12 @@ void leftPID() {
     display.print(F("   "));
 
     // print diff in encoders
-    // display.gotoXY(0, 0);
-    // display.print(diff);
-    // display.print(F("   "));
+    display.gotoXY(0, 0);
+    display.print(diff);
+    display.print(F("   "));
+
+    updateOdometry();
+
   }
 
   motors.setSpeeds(0, 0);
@@ -298,11 +353,52 @@ void leftPID() {
 
 }
 
+void updateOdometry() {
+
+  int16_t leftCounts = encoders.getCountsAndResetLeft();
+  int16_t rightCounts = encoders.getCountsAndResetRight();
+  
+  float leftDist = (leftCounts * WHEEL_CIRCUMFERENCE) / (CLICKS_PER_ROTATION * GEAR_RATIO);
+  float rightDist = (rightCounts * WHEEL_CIRCUMFERENCE) / (CLICKS_PER_ROTATION * GEAR_RATIO);
+  
+  float distanceTraveled = (leftDist + rightDist) / 2.0;
+  float deltaTheta = (rightDist - leftDist) / WHEEL_BASE;
+  
+  x += distanceTraveled * cos(theta + deltaTheta / 2.0);
+  y += distanceTraveled * sin(theta + deltaTheta / 2.0);
+  theta += deltaTheta;
+  
+  while (theta > 2 * PI) theta -= 2 * PI;
+  while (theta < -2 * PI) theta += 2 * PI;
+  
+  leftDistance += leftDist;
+  rightDistance += rightDist;
+
+}
+
+void displayOdometry() {
+
+  display.clear();
+  display.gotoXY(0, 0);
+  display.print("X:");
+  display.print(x);
+  display.gotoXY(0, 1);
+  display.print("Y:");
+  display.print(y);
+  display.gotoXY(0, 2);
+  display.print("Theta:");
+  display.print(theta * 180 / PI);
+
+}
+
+
 void setup() {
+
   Serial.begin(57600);
   delay(1000);
 
   turnSensorSetup();
+  encoders.init();
 
   movePID(1800);  
   turnPID(90, true);  
@@ -310,5 +406,9 @@ void setup() {
 }
 
 void loop() {
+
+  updateOdometry();
+  displayOdometry();
+  delay(100);
 
 }
