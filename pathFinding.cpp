@@ -271,3 +271,36 @@ void createMatrix() {
     }
 
 }
+
+int hCost(int node) {
+
+  return abs(node % 4 - endNode % 4) + abs(node / 4 - endNode / 4);
+
+}
+
+void Path() {
+
+  for (int a = 1; a < gateCount + 2; a++) {
+
+    endNode = endPoints[a];
+    startNode = endPoints[a - 1];
+    int parent[24];  
+
+    for (int i = 0; i < 24; i++) {
+
+      parent[i] = -1;
+
+    }
+
+    int currentNode = startNode;
+    bool openSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    bool closedSet[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    int fCostList[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    openSet[startNode] = 1;
+    route[routeCount-1] = startNode;
+    prevNode = startNode;
+
+  }
+
+}
