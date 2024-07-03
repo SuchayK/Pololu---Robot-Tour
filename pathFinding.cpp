@@ -184,3 +184,90 @@ void printPath(int parent[], int node) {
   functionCount++; 
 }
 
+bool adjMatrix[16][16];
+
+void createMatrix() {
+
+  for (int a = 0; a < 16; a++) {
+
+    for (int b = 0; b < 16; b++) {
+
+      adjMatrix[a][b] = 1;
+
+    }
+
+  }
+
+  for (int a = 0; a < 16; a++) {
+
+    int i = a / 4;
+    int j = a % 4;
+    String str = maze[i][j];
+    int w = 0;       
+
+    if (str.indexOf('G') >= 0) {  
+
+      w = -16;            
+
+    }
+    if (str.indexOf('T') < 0 && i > 0) {  //IF THERE IS NO TOP BARRIER && IS NOT IN THE TOP ROW
+
+      adjMatrix[4 * (i - 1) + j][4 * i + j] = w;
+
+      if (maze[i - 1][j].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
+
+        adjMatrix[4 * (i - 1) + j][4 * i + j] = -16;
+
+      }
+
+    }
+    if (str.indexOf('B') < 0 && i < 3) {  // IF THERE IS NO BOTTOM BARRIER && IS NOT IN THE BOTTOM ROW
+
+      adjMatrix[4 * (i + 1) + j][4 * i + j] = w;
+
+      if (maze[i + 1][j].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
+
+        adjMatrix[4 * (i + 1) + j][4 * i + j] = -16;
+
+      }
+
+    }
+    if (str.indexOf('L') < 0 && j > 0) {  //IF THERE IS NO LEFT BARRIER && IS NOT IN THE LEFT-MOST COLUMN
+
+      adjMatrix[4 * i + j][4 * i + j - 1] = w;
+
+      if (maze[i][j - 1].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
+
+        adjMatrix[4 * i + j][4 * i + j - 1] = -16;
+
+      }
+
+    }
+
+    if (str.indexOf('R') < 0 && j < 3) {  // IF THERE IS NO RIGHT BARRIER && IS NOT IN THE RIGHT MOST COLUMN
+
+      adjMatrix[4 * i + j][4 * i + j + 1] = w;
+
+      if (maze[i][j + 1].indexOf('G') >= 0) {  //CHECK IF IT LEADS TO A GATE ZONE
+
+        adjMatrix[4 * i + j][4 * i + j + 1] = -16;
+
+      }
+
+    }
+
+  }
+
+    for (int a = 0; a < 16; a++) {
+
+        for (int b = 0; b < 16; b++) {
+
+            Serial.print(adjMatrix[a][b]);
+            Serial.print("\t");
+
+        }
+
+    Serial.println("");//DEBUG CHECKING
+    }
+
+}
