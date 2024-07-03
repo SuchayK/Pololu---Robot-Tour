@@ -286,24 +286,71 @@ int hCost(int node) {
 }
 
 struct Node {
-    int id, fCost;
-    Node(int i, int f) : id(i), fCost(f) {}
-    bool operator>(const Node& other) const { return fCost > other.fCost; }
+
+  int id, fCost;
+  Node(int i, int f) : id(i), fCost(f) {}
+  bool operator>(const Node& other) const { return fCost > other.fCost; }
+
 };
 
 int dx[] = {-1, 1, 0, 0};
 int dy[] = {0, 0, 1, -1};
 
 int heuristic(int current, int end) {
-    int cx = current / 4, cy = current % 4;
-    int ex = end / 4, ey = end % 4;
-    return std::abs(cx - ex) + std::abs(cy - ey);
+
+  int cx = current / 4, cy = current % 4;
+  int ex = end / 4, ey = end % 4;
+  return std::abs(cx - ex) + std::abs(cy - ey);
+
 }
 
 void reconstructPath(const std::vector<int>& cameFrom, int current) {
-    std::vector<int> path;
-    while (current != -1) {
-        path.push_back(current);
-        current = cameFrom[current];
+
+  std::vector<int> path;
+
+  while (current != -1) {
+
+    path.push_back(current);
+    current = cameFrom[current];
+
+  }
+
+  for (auto it = path.rbegin(); it != path.rend(); ++it) {
+
+    std::cout << *it << " ";
+
+  }
+
+  std::cout << std::endl;
+
+}
+
+void findPath(const std::vector<std::vector<int>>& adjMatrix, const std::vector<int>& endPoints) {
+  for (int i = 1; i < endPoints.size(); ++i) {
+    int start = endPoints[i - 1];
+    int end = endPoints[i];
+    
+    std::vector<bool> closedSet(GRID_SIZE, false);
+    std::vector<int> gScore(GRID_SIZE, INF);
+    std::vector<int> fScore(GRID_SIZE, INF);
+    std::vector<int> cameFrom(GRID_SIZE, -1);
+    
+    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
+    
+    gScore[start] = 0;
+    fScore[start] = heuristic(start, end);
+    openSet.push(Node(start, fScore[start]));
+    
+    while (!openSet.empty()) {
+      int current = openSet.top().id;
+      openSet.pop();
+      
+      if (current == end) {
+
+        reconstructPath(cameFrom, end);
+        break;
+
+      }
     }
+  }
 }
