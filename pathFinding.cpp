@@ -22,174 +22,90 @@ void map() {
 
 }
 
-int orientation = 0;
-void printPath(int parent[], int node) {
+enum class Orientation { North, East, South, West };
+enum class Direction { Left = -1, Right = 1, Up = -4, Down = 4 };
 
-  if (parent[node] == -1) {
-    Serial.println(node);
-    route[routeCount] = node;
-    return;
-  }
+const int MAX_ROUTE = 100;
+const int MAX_FUNCTIONS = 200;
 
-  printPath(parent, parent[node]);
+std::array<int, MAX_ROUTE> route;
+int routeCount = 0;
 
-  Serial.print(" --> ");
-  Serial.println(node);
+std::array<std::function<void()>, MAX_FUNCTIONS> movementFunctions;
+std::array<int, MAX_FUNCTIONS> distanceArray;
+int functionIndex = 0;
 
-  Serial.println(node - prevNode);
+Orientation currentOrientation = Orientation::North;
 
-  int distanceAdditive = 45;
+void turn_left();
+void turn_right();
+void go_forward();
+void go_backward();
+void full_turn();
 
-  switch (node - prevNode) { 
-
-    case -1: //left
-
-      switch(orientation){
-
-        case 0:
-
-          functionArray[functionCount] = turn_left;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-
-        case 1:
-
-          functionArray[functionCount] = fullTurn;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-
-        case 2:
-
-          functionArray[functionCount] = turn_right;
-          functionArray[functionCount+1] = go_fwd; 
-          functionCount++;  
-          break;
-
-        case 3:
-
-          functionArray[functionCount] = ;     
-          distance[functionCount-1] += distanceAdditive;      
-          functionCount--;
-          break;
-
-        default:
-
-          Serial.println(node-prevNode);
-          break;
-
-      }
-
-      orientation = 3; //left
-      break;
-
-    case 1: //right
-
-      switch(orientation){
-
-        case 0:
-
-          functionArray[functionCount] = turn_right;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-
-        case 1:
-
-          functionArray[functionCount] = ;     
-          distance[functionCount-1] += distanceAdditive;    
-          functionCount--;
-          break;
-
-        case 2:
-
-          functionArray[functionCount] = turn_left;
-          functionArray[functionCount+1] = go_fwd;  
-          functionCount++; 
-          break;
-
-        case 3:
-
-          functionArray[functionCount] = fullTurn;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-
-        default:
-
-          Serial.println(node-prevNode);
-          break;
-      }
-      orientation = 1; //right
-      break;
-
-    case -4://up
-      switch(orientation){
-        case 0:
-          distance[functionCount-1] += distanceAdditive;    
-          functionCount--;
-          break;
-        case 1:
-          functionArray[functionCount] = turn_left;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        case 2:
-          functionArray[functionCount] = fullTurn;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        case 3:
-          functionArray[functionCount] = turn_right;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        default:
-          Serial.println(node-prevNode);
-          break;
-      }
-      orientation = 0;
-      break;
-    case 4:
-      switch(orientation){
-        case 0:
-          functionArray[functionCount] = fullTurn;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        case 1:
-          functionArray[functionCount] = turn_right;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        case 2:
-          distance[functionCount-1] += distanceAdditive;  
-          functionCount--;
-          break;
-        case 3:
-          functionArray[functionCount] = turn_left;
-          functionArray[functionCount+1] = go_fwd;
-          functionCount++;
-          break;
-        default:
-          Serial.println(node-prevNode);
-          break;        
-      }
-      orientation = 2;
-      break;
-    default:
-      Serial.println(node-prevNode);
-      break;
-  }
-  if (node == endPoints[gateCount + 1]){ /
-    functionArray[functionCount+1] = go_bck;
-    functionCount++;
-    distance[functionCount] = 13;
-  }
-  prevNode = node;
-  functionCount++; 
+void logMovement(int fromNode, int toNode) {
+    Serial.print(fromNode);
+    Serial.print(" --> ");
+    Serial.println(toNode);
+    Serial.println(toNode - fromNode);
 }
+
+void updateOrientation(Direction dir) {
+    int orientationChange = static_cast<int>(dir);
+    currentOrientation = static_cast<Orientation>((static_cast<int>(currentOrientation) + orientationChange + 4) % 4);
+}
+
+void addMovement(std::function<void()> movement, int distanceAdd = 0) {
+    if (distanceAdd > 0 && functionIndex > 0) {
+        distanceArray[functionIndex - 1] += distanceAdd;
+    } else {
+        movementFunctions[functionIndex] = movement;
+        distanceArray[functionIndex] = distanceAdd;
+        functionIndex++;
+    }
+}
+
+void handleMovement(Direction dir) {
+    const int distanceIncrement = 45;
+    
+    std::array<std::array<std::function<void()>, 4>, 4> movementMatrix = {{
+        {go_forward, turn_right, full_turn, turn_left},
+        {turn_left, go_forward, turn_right, full_turn},
+        {full_turn, turn_left, go_forward, turn_right},
+        {turn_right, full_turn, turn_left, go_forward}
+    }};
+
+    int orientationIndex = static_cast<int>(currentOrientation);
+    int directionIndex = (static_cast<int>(dir) + 5) % 4;  // Map -4, -1, 1, 4 to 0, 1, 2, 3
+
+    if (movementMatrix[orientationIndex][directionIndex] == go_forward) {
+        addMovement(nullptr, distanceIncrement);
+    } else {
+        addMovement(movementMatrix[orientationIndex][directionIndex]);
+        addMovement(go_forward);
+    }
+
+    updateOrientation(dir);
+}
+
+void reconstructPath(const int parent[], int node, const std::array<int, MAX_ROUTE>& endPoints, int gateCount) {
+    if (parent[node] == -1) {
+        Serial.println(node);
+        route[routeCount++] = node;
+        return;
+    }
+
+    reconstructPath(parent, parent[node], endPoints, gateCount);
+    logMovement(parent[node], node);
+
+    Direction moveDirection = static_cast<Direction>(node - parent[node]);
+    handleMovement(moveDirection);
+
+    if (node == endPoints[gateCount + 1]) {
+        addMovement(go_backward, 13);
+    }
+}
+
 
 bool adjMatrix[16][16];
 
