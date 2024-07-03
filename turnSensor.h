@@ -27,7 +27,6 @@ void turnSensorUpdate()
   
   imu.readGyro();
   turnRate = imu.g.z - gyroOffset;
-
   
   uint16_t m = micros();
   uint16_t dt = m - gyroLastUpdate;
