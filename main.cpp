@@ -416,20 +416,97 @@ void performSmoothTurn(Point start, Point end, Point control1, Point control2) {
 
 }
 
-
 void setup() {
-  
-    Serial.begin(57600);
-    delay(1000);
 
-    turnSensorSetup();
-    encoders.init();
+  Serial.begin(57600);
+  delay(1000);
 
-    Point start = {0, 0};
-    Point end = {100, 100};
-    Point control1 = {0, 50};
-    Point control2 = {50, 100};
-    performSmoothTurn(start, end, control1, control2);
+  turnSensorSetup();
+  encoders.init();
+
+  Point currentPos = {0, 0};
+  float currentAngle = 0; 
+
+  movePID(1800);
+  currentPos.x += 180;
+
+  Point end1 = {280, 100};
+  Point control1 = {230, 0};
+  Point control2 = {280, 50};
+  performSmoothTurn(currentPos, end1, control1, control2);
+  currentPos = end1;
+
+  movePID(1000);
+  currentPos.y += 100;
+
+  turnPID(90, false);
+  currentAngle += 90;
+
+  movePID(1500);
+  currentPos.x -= 150;
+
+  Point end2 = {80, 300};
+  Point control3 = {80, 250};
+  Point control4 = {130, 300};
+  performSmoothTurn(currentPos, end2, control3, control4);
+  currentPos = end2;
+
+  movePID(1200);
+  currentPos.y += 120;
+
+  turnPID(90, true);
+  currentAngle -= 90;
+
+  movePID(2000);
+  currentPos.x += 200;
+
+  Point end3 = {330, 500};
+  Point control5 = {330, 420};
+  Point control6 = {280, 500};
+  performSmoothTurn(currentPos, end3, control5, control6);
+  currentPos = end3;
+
+  movePID(1000);
+  currentPos.y += 100;
+
+  turnPID(90, true);
+  currentAngle -= 90;
+
+  movePID(1500);
+  currentPos.x += 150;
+
+  Point end4 = {530, 550};
+  Point control7 = {480, 600};
+  Point control8 = {530, 600};
+  performSmoothTurn(currentPos, end4, control7, control8);
+  currentPos = end4;
+
+  movePID(1000);
+  currentPos.y -= 100;
+
+  turnPID(90, false);
+  currentAngle += 90;
+
+  movePID(2000);
+  currentPos.x += 200;
+
+  Point end5 = {730, 450};
+  Point control9 = {730, 500};
+  Point control10 = {680, 450};
+  performSmoothTurn(currentPos, end5, control9, control10);
+  currentPos = end5;
+
+  movePID(1000);
+  currentPos.y -= 100;
+
+  display.clear();
+  display.print("Final X: ");
+  display.print(currentPos.x);
+  display.gotoXY(0, 1);
+  display.print("Final Y: ");
+  display.print(currentPos.y);
+
+  delay(5000);
 
 }
 
