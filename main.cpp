@@ -391,19 +391,48 @@ void displayOdometry() {
 
 }
 
+void performSmoothTurn(Point start, Point end, Point control1, Point control2) {
 
-void setup() {
+    std::vector<Point> controlPoints = {start, control1, control2, end};
+    BezierCurve curve(controlPoints);
+    std::vector<Point> pathPoints = curve.generateCurvePoints(100);
 
-  Serial.begin(57600);
-  delay(1000);
+    for (size_t i = 1; i < pathPoints.size(); ++i) {
+        Point current = pathPoints[i];
+        Point previous = pathPoints[i - 1];
+        float dx = current.x - previous.x;
+        float dy = current.y - previous.y;
+        float angle = atan2(dy, dx);
+        float distance = sqrt(dx*dx + dy*dy);
+        
+ 
+        int targetCounts = (distance * CLICKS_PER_ROTATION * GEAR_RATIO) / WHEEL_CIRCUMFERENCE;
+        
+        movePID(targetCounts);
+        
+        turnPID(angle * 180 / PI, true);
 
-  turnSensorSetup();
-  encoders.init();
-
-  movePID(1800);  
-  turnPID(90, true);  
+    }
 
 }
+
+
+void setup() {
+  
+    Serial.begin(57600);
+    delay(1000);
+
+    turnSensorSetup();
+    encoders.init();
+
+    Point start = {0, 0};
+    Point end = {100, 100};
+    Point control1 = {0, 50};
+    Point control2 = {50, 100};
+    performSmoothTurn(start, end, control1, control2);
+
+}
+
 
 void loop() {
 

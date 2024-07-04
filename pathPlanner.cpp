@@ -184,4 +184,18 @@ public:
 
     }
 
+    void PathPlanner::executeSmoothTurn(int from, int to) {
+
+        Point start = {static_cast<double>(from % GRID_DIM), static_cast<double>(from / GRID_DIM)};
+        Point end = {static_cast<double>(to % GRID_DIM), static_cast<double>(to / GRID_DIM)};
+        
+        Point control1 = {(start.x + end.x) / 2, start.y};
+        Point control2 = {(start.x + end.x) / 2, end.y};
+
+        RobotController controller;
+        controller.performSmoothTurn(start, end, control1, control2);
+
+    }
+
+
 }
