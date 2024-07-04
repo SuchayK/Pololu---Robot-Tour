@@ -790,6 +790,133 @@ void autonomousRoutine3() {
 
 }
 
+void autonomousRoutine4() {
+  display.clear();
+  display.print("Auto 4 Start");
+  delay(1000);
+
+  Point currentPos = {0, 0};
+  float currentAngle = 0;
+
+  for (int i = 1; i <= 5; i++) {
+    movePID(300 * i);
+    currentPos.x += 30 * i * cos(currentAngle * PI / 180);
+    currentPos.y += 30 * i * sin(currentAngle * PI / 180);
+    turnPID(90, true);
+    currentAngle -= 90;
+  }
+
+  for (int j = 0; j < 2; j++) {
+    for (int i = 0; i < 180; i += 15) {
+      Point start = currentPos;
+      Point end = {
+        currentPos.x + 100 * cos(i * PI / 180),
+        currentPos.y + 50 * sin(2 * i * PI / 180)
+      };
+      Point control1 = {
+        start.x + 50,
+        start.y + 25 * sin(2 * i * PI / 180)
+      };
+      Point control2 = {
+        end.x - 50,
+        end.y + 25 * sin(2 * (i + 15) * PI / 180)
+      };
+      performSmoothTurn(start, end, control1, control2);
+      currentPos = end;
+    }
+    turnPID(180, true);
+    currentAngle -= 180;
+  }
+
+  turnPID(calculateAngle(currentPos, {0, 0}), true);
+  currentAngle = calculateAngle(currentPos, {0, 0});
+  movePID(calculateDistance(currentPos, {0, 0}));
+  currentPos = {0, 0};
+
+  turnPID(-currentAngle, true);
+  currentAngle = 0;
+
+  display.clear();
+  display.print("Auto 4 End");
+  display.gotoXY(0, 1);
+  display.print("X:");
+  display.print(currentPos.x);
+  display.print(" Y:");
+  display.print(currentPos.y);
+  delay(5000);
+}
+
+void autonomousRoutine5() {
+  display.clear();
+  display.print("Auto 5 Start");
+  delay(1000);
+
+  Point currentPos = {0, 0};
+  float currentAngle = 0;
+
+  for (int i = 0; i < 5; i++) {
+    movePID(2000);
+    currentPos.x += 200 * cos(currentAngle * PI / 180);
+    currentPos.y += 200 * sin(currentAngle * PI / 180);
+
+    Point start = currentPos;
+    Point end = {
+      currentPos.x + 200 * cos((currentAngle + 144) * PI / 180),
+      currentPos.y + 200 * sin((currentAngle + 144) * PI / 180)
+    };
+    Point control1 = {
+      start.x + 100 * cos((currentAngle + 72) * PI / 180),
+      start.y + 100 * sin((currentAngle + 72) * PI / 180)
+    };
+    Point control2 = {
+      end.x - 100 * cos((currentAngle + 72) * PI / 180),
+      end.y - 100 * sin((currentAngle + 72) * PI / 180)
+    };
+    performSmoothTurn(start, end, control1, control2);
+    currentPos = end;
+
+    currentAngle += 144;
+    if (currentAngle >= 360) currentAngle -= 360;
+  }
+
+  float radius = 250;
+  for (int i = 0; i <= 360; i += 10) {
+    Point start = currentPos;
+    Point end = {
+      radius * cos(i * PI / 180),
+      radius * sin(i * PI / 180)
+    };
+    Point control1 = {
+      start.x + (end.x - start.x) / 3,
+      start.y + (end.y - start.y) / 3
+    };
+    Point control2 = {
+      start.x + 2 * (end.x - start.x) / 3,
+      start.y + 2 * (end.y - start.y) / 3
+    };
+    performSmoothTurn(start, end, control1, control2);
+    currentPos = end;
+  }
+
+  turnPID(calculateAngle(currentPos, {0, 0}), true);
+  currentAngle = calculateAngle(currentPos, {0, 0});
+  movePID(calculateDistance(currentPos, {0, 0}));
+  currentPos = {0, 0};
+
+  turnPID(-currentAngle, true);
+  currentAngle = 0;
+
+  display.clear();
+  display.print("Auto 5 End");
+  display.gotoXY(0, 1);
+  display.print("X:");
+  display.print(currentPos.x);
+  display.print(" Y:");
+  display.print(currentPos.y);
+  delay(5000);
+}
+
+
 void setup() {
 
   Serial.begin(57600);
