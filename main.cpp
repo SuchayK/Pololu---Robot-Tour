@@ -416,6 +416,250 @@ void performSmoothTurn(Point start, Point end, Point control1, Point control2) {
 
 }
 
+void autonomousRoutine2() {
+
+  display.clear();
+  display.print("Auto 2 Start");
+  delay(1000);
+
+  Point currentPos = {0, 0};
+  float currentAngle = 0; 
+
+  for (int i = 1; i <= 4; i++) {
+
+    movePID(500 * i);
+    currentPos.x += 50 * i;
+    turnPID(90, true);
+    currentAngle -= 90;
+    movePID(500 * i);
+    currentPos.y += 50 * i;
+    turnPID(90, true);
+    currentAngle -= 90;
+
+  }
+
+  for (int i = 0; i < 3; i++) {
+
+    movePID(1500);
+    currentPos.x -= 150;
+    turnPID(45, false);
+    currentAngle += 45;
+    movePID(707); 
+    currentPos.x -= 50;
+    currentPos.y += 50;
+    turnPID(90, true);
+    currentAngle -= 90;
+    movePID(707);
+    currentPos.x -= 50;
+    currentPos.y -= 50;
+    turnPID(45, false);
+    currentAngle += 45;
+
+  }
+
+  Point center1 = {currentPos.x - 75, currentPos.y};
+  Point center2 = {currentPos.x + 75, currentPos.y};
+
+  for (int i = 0; i < 2; i++) {
+
+    Point end1 = {center1.x, center1.y - 75};
+    Point control1 = {center1.x - 75, center1.y};
+    Point control2 = {center1.x - 75, center1.y - 75};
+    performSmoothTurn(currentPos, end1, control1, control2);
+    currentPos = end1;
+
+    Point end2 = {center1.x, center1.y + 75};
+    Point control3 = {center1.x + 75, center1.y - 75};
+    Point control4 = {center1.x + 75, center1.y};
+    performSmoothTurn(currentPos, end2, control3, control4);
+    currentPos = end2;
+
+    Point end3 = {center2.x, center2.y + 75};
+    Point control5 = {center2.x - 75, center2.y};
+    Point control6 = {center2.x - 75, center2.y + 75};
+    performSmoothTurn(currentPos, end3, control5, control6);
+    currentPos = end3;
+
+    Point end4 = {center2.x, center2.y - 75};
+    Point control7 = {center2.x + 75, center2.y + 75};
+    Point control8 = {center2.x + 75, center2.y};
+    performSmoothTurn(currentPos, end4, control7, control8);
+    currentPos = end4;
+
+  }
+
+  turnPID(calculateAngle(currentPos, {0, 0}), true);
+  currentAngle = calculateAngle(currentPos, {0, 0});
+  movePID(calculateDistance(currentPos, {0, 0}));
+  currentPos = {0, 0};
+
+  turnPID(-currentAngle, true);
+  currentAngle = 0;
+
+  display.clear();
+  display.print("Auto 2 End");
+  display.gotoXY(0, 1);
+  display.print("X:");
+  display.print(currentPos.x);
+  display.print(" Y:");
+  display.print(currentPos.y);
+  delay(5000);
+
+}
+
+float calculateAngle(Point start, Point end) {
+
+    return atan2(end.y - start.y, end.x - start.x) * 180 / PI;
+
+}
+
+int calculateDistance(Point start, Point end) {
+
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+    return sqrt(dx*dx + dy*dy) * (CLICKS_PER_ROTATION * GEAR_RATIO) / WHEEL_CIRCUMFERENCE;
+
+}
+
+void autonomousRoutine3() {
+
+  display.clear();
+  display.print("Auto 3 Start");
+  delay(1000);
+
+  Point currentPos = {0, 0};
+  float currentAngle = 0;  
+
+  for (int i = 0; i < 4; i++) {
+
+    movePID(1414); 
+    currentPos.x += 100 * cos(currentAngle * PI / 180);
+    currentPos.y += 100 * sin(currentAngle * PI / 180);
+    turnPID(90, true);
+    currentAngle -= 90;
+
+  }
+
+  for (int i = 0; i < 4; i++) {
+
+    Point start = currentPos;
+    Point end = {
+
+        currentPos.x + 150 * cos((currentAngle + 90) * PI / 180),
+        currentPos.y + 150 * sin((currentAngle + 90) * PI / 180)
+
+    };
+    Point control1 = {
+
+        currentPos.x + 75 * cos(currentAngle * PI / 180),
+        currentPos.y + 75 * sin(currentAngle * PI / 180)
+        
+    };
+    Point control2 = {
+
+        end.x - 75 * cos(currentAngle * PI / 180),
+        end.y - 75 * sin(currentAngle * PI / 180)
+
+    };
+
+    performSmoothTurn(start, end, control1, control2);
+    currentPos = end;
+    turnPID(180, false);
+    currentAngle += 180;
+    
+  }
+
+  int sideLength = 500;
+
+  for (int i = 0; i < 4; i++) {
+
+    for (int j = 0; j < 4; j++) {
+
+      movePID(sideLength);
+      currentPos.x += sideLength * cos(currentAngle * PI / 180) / 10;
+      currentPos.y += sideLength * sin(currentAngle * PI / 180) / 10;
+      turnPID(90, false);
+      currentAngle += 90;
+
+    }
+
+      sideLength -= 100;
+
+  }
+
+  for (int i = 0; i < 4; i++) {
+
+    for (int j = 0; j < 20; j++) {
+
+      Point start = currentPos;
+      
+      Point end = {
+
+          currentPos.x + 50,
+          currentPos.y + 50 * sin(j * PI / 10)
+
+      };
+
+      Point control1 = {start.x + 25, start.y};
+      Point control2 = {end.x - 25, end.y};
+      performSmoothTurn(start, end, control1, control2);
+      currentPos = end;
+
+    }
+
+    turnPID(180, true);
+    currentAngle -= 180;
+    
+  }
+
+  while (calculateDistance(currentPos, {0, 0}) > 100) {
+
+    Point start = currentPos;
+    Point end = {
+
+      (currentPos.x * 0.9),
+      (currentPos.y * 0.9)
+
+    }
+
+    Point control1 = {
+
+      start.x - (start.y - end.y) * 0.5,
+      start.y + (start.x - end.x) * 0.5
+
+    }
+
+    Point control2 = {
+
+      end.x - (start.y - end.y) * 0.5,
+      end.y + (start.x - end.x) * 0.5
+
+    }
+
+    performSmoothTurn(start, end, control1, control2);
+    currentPos = end;
+
+  }
+
+  turnPID(calculateAngle(currentPos, {0, 0}), true);
+  currentAngle = calculateAngle(currentPos, {0, 0});
+  movePID(calculateDistance(currentPos, {0, 0}));
+  currentPos = {0, 0};
+
+  turnPID(-currentAngle, true);
+  currentAngle = 0;
+
+  display.clear();
+  display.print("Auto 3 End");
+  display.gotoXY(0, 1);
+  display.print("X:");
+  display.print(currentPos.x);
+  display.print(" Y:");
+  display.print(currentPos.y);
+  delay(5000);
+
+}
+
 void setup() {
 
   Serial.begin(57600);
@@ -424,89 +668,92 @@ void setup() {
   turnSensorSetup();
   encoders.init();
 
-  Point currentPos = {0, 0};
-  float currentAngle = 0; 
+  autonomousRoutine2();
+  autonomousRoutine3();
 
-  movePID(1800);
-  currentPos.x += 180;
+  // Point currentPos = {0, 0};
+  // float currentAngle = 0; 
 
-  Point end1 = {280, 100};
-  Point control1 = {230, 0};
-  Point control2 = {280, 50};
-  performSmoothTurn(currentPos, end1, control1, control2);
-  currentPos = end1;
+  // movePID(1800);
+  // currentPos.x += 180;
 
-  movePID(1000);
-  currentPos.y += 100;
+  // Point end1 = {280, 100};
+  // Point control1 = {230, 0};
+  // Point control2 = {280, 50};
+  // performSmoothTurn(currentPos, end1, control1, control2);
+  // currentPos = end1;
 
-  turnPID(90, false);
-  currentAngle += 90;
+  // movePID(1000);
+  // currentPos.y += 100;
 
-  movePID(1500);
-  currentPos.x -= 150;
+  // turnPID(90, false);
+  // currentAngle += 90;
 
-  Point end2 = {80, 300};
-  Point control3 = {80, 250};
-  Point control4 = {130, 300};
-  performSmoothTurn(currentPos, end2, control3, control4);
-  currentPos = end2;
+  // movePID(1500);
+  // currentPos.x -= 150;
 
-  movePID(1200);
-  currentPos.y += 120;
+  // Point end2 = {80, 300};
+  // Point control3 = {80, 250};
+  // Point control4 = {130, 300};
+  // performSmoothTurn(currentPos, end2, control3, control4);
+  // currentPos = end2;
 
-  turnPID(90, true);
-  currentAngle -= 90;
+  // movePID(1200);
+  // currentPos.y += 120;
 
-  movePID(2000);
-  currentPos.x += 200;
+  // turnPID(90, true);
+  // currentAngle -= 90;
 
-  Point end3 = {330, 500};
-  Point control5 = {330, 420};
-  Point control6 = {280, 500};
-  performSmoothTurn(currentPos, end3, control5, control6);
-  currentPos = end3;
+  // movePID(2000);
+  // currentPos.x += 200;
 
-  movePID(1000);
-  currentPos.y += 100;
+  // Point end3 = {330, 500};
+  // Point control5 = {330, 420};
+  // Point control6 = {280, 500};
+  // performSmoothTurn(currentPos, end3, control5, control6);
+  // currentPos = end3;
 
-  turnPID(90, true);
-  currentAngle -= 90;
+  // movePID(1000);
+  // currentPos.y += 100;
 
-  movePID(1500);
-  currentPos.x += 150;
+  // turnPID(90, true);
+  // currentAngle -= 90;
 
-  Point end4 = {530, 550};
-  Point control7 = {480, 600};
-  Point control8 = {530, 600};
-  performSmoothTurn(currentPos, end4, control7, control8);
-  currentPos = end4;
+  // movePID(1500);
+  // currentPos.x += 150;
 
-  movePID(1000);
-  currentPos.y -= 100;
+  // Point end4 = {530, 550};
+  // Point control7 = {480, 600};
+  // Point control8 = {530, 600};
+  // performSmoothTurn(currentPos, end4, control7, control8);
+  // currentPos = end4;
 
-  turnPID(90, false);
-  currentAngle += 90;
+  // movePID(1000);
+  // currentPos.y -= 100;
 
-  movePID(2000);
-  currentPos.x += 200;
+  // turnPID(90, false);
+  // currentAngle += 90;
 
-  Point end5 = {730, 450};
-  Point control9 = {730, 500};
-  Point control10 = {680, 450};
-  performSmoothTurn(currentPos, end5, control9, control10);
-  currentPos = end5;
+  // movePID(2000);
+  // currentPos.x += 200;
 
-  movePID(1000);
-  currentPos.y -= 100;
+  // Point end5 = {730, 450};
+  // Point control9 = {730, 500};
+  // Point control10 = {680, 450};
+  // performSmoothTurn(currentPos, end5, control9, control10);
+  // currentPos = end5;
 
-  display.clear();
-  display.print("Final X: ");
-  display.print(currentPos.x);
-  display.gotoXY(0, 1);
-  display.print("Final Y: ");
-  display.print(currentPos.y);
+  // movePID(1000);
+  // currentPos.y -= 100;
 
-  delay(5000);
+  // display.clear();
+  // display.print("Final X: ");
+  // display.print(currentPos.x);
+  // display.gotoXY(0, 1);
+  // display.print("Final Y: ");
+  // display.print(currentPos.y);
+
+  // delay(5000);
 
 }
 
