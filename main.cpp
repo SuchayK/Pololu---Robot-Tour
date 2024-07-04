@@ -353,6 +353,136 @@ void leftPID() {
 
 }
 
+void enhancedMovePID(int targetDistance) {
+  
+  const float Kp = 0.15, Ki = 0.08, Kd = 0.02, Kc = 0.4;
+  const int maxSpeed = 150, iThreshold = 800;
+  int leftCount = 0, rightCount = 0;
+  float leftIntegral = 0, rightIntegral = 0;
+  int leftPrevError = 0, rightPrevError = 0;
+  unsigned long prevTime = micros();
+
+  while (leftCount < targetDistance || rightCount < targetDistance) {
+
+    leftCount += encoders.getCountsAndResetLeft();
+    rightCount += encoders.getCountsAndResetRight();
+
+    unsigned long currentTime = micros();
+    float deltaTime = (currentTime - prevTime) / 1e6;
+    prevTime = currentTime;
+
+    int leftError = targetDistance - leftCount;
+    int rightError = targetDistance - rightCount;
+
+    float leftDerivative = (leftError - leftPrevError) / deltaTime;
+    float rightDerivative = (rightError - rightPrevError) / deltaTime;
+
+    leftIntegral = abs(leftError) < iThreshold ? leftIntegral + leftError * deltaTime : 0;
+    rightIntegral = abs(rightError) < iThreshold ? rightIntegral + rightError * deltaTime : 0;
+
+    int leftPower = Kp * leftError + Ki * leftIntegral + Kd * leftDerivative;
+    int rightPower = Kp * rightError + Ki * rightIntegral + Kd * rightDerivative;
+
+    int encoderDifference = rightCount - leftCount;
+    leftPower += Kc * encoderDifference;
+    rightPower -= Kc * encoderDifference;
+
+    turnSensorUpdate();
+    int gyroError = (int32_t)turnAngle / turnAngle1;
+    leftPower += Kc * gyroError;
+    rightPower -= Kc * gyroError;
+
+    leftPower = constrain(leftPower, -maxSpeed, maxSpeed);
+    rightPower = constrain(rightPower, -maxSpeed, maxSpeed);
+
+    motors.setSpeeds(leftPower, rightPower);
+
+    leftPrevError = leftError;
+    rightPrevError = rightError;
+
+    updateOdometry();
+    displayProgress(leftCount, rightCount, leftPower, rightPower);
+
+  }
+
+  motors.setSpeeds(0, 0);
+
+}
+
+void precisionTurnPID(float targetAngle, bool clockwise) {
+
+  const float Kp = 0.8, Ki = 0.1, Kd = 0.05;
+  const int maxTurnSpeed = 100, iThreshold = 1000;
+  float integral = 0, prevError = 0;
+  unsigned long prevTime = micros();
+
+  float initialAngle = (float)((int32_t)turnAngle / turnAngle1);
+  float angleDifference = targetAngle - initialAngle;
+
+  if (!clockwise) angleDifference = -angleDifference;
+
+  while (abs(angleDifference) > 0.5) {
+
+    turnSensorUpdate();
+    float currentAngle = (float)((int32_t)turnAngle / turnAngle1);
+    float error = targetAngle - currentAngle;
+    if (!clockwise) error = -error;
+
+    unsigned long currentTime = micros();
+    float deltaTime = (currentTime - prevTime) / 1e6;
+    prevTime = currentTime;
+
+    float derivative = (error - prevError) / deltaTime;
+    integral = abs(error) < iThreshold ? integral + error * deltaTime : 0;
+
+    int turnPower = Kp * error + Ki * integral + Kd * derivative;
+    turnPower = constrain(turnPower, -maxTurnSpeed, maxTurnSpeed);
+
+    motors.setSpeeds(clockwise ? -turnPower : turnPower, clockwise ? turnPower : -turnPower);
+
+    prevError = error;
+    angleDifference = targetAngle - currentAngle;
+    if (!clockwise) angleDifference = -angleDifference;
+
+    displayTurnProgress(currentAngle, targetAngle, turnPower);
+
+  }
+
+  motors.setSpeeds(0, 0);
+
+}
+
+void displayProgress(int leftCount, int rightCount, int leftPower, int rightPower) {
+
+  display.clear();
+  display.gotoXY(0, 0);
+  display.print("L:");
+  display.print(leftCount);
+  display.print(" R:");
+  display.print(rightCount);
+  display.gotoXY(0, 1);
+  display.print("LP:");
+  display.print(leftPower);
+  display.print(" RP:");
+  display.print(rightPower);
+
+}
+
+void displayTurnProgress(float currentAngle, float targetAngle, int turnPower) {
+
+  display.clear();
+  display.gotoXY(0, 0);
+  display.print("Cur:");
+  display.print(currentAngle);
+  display.gotoXY(0, 1);
+  display.print("Tgt:");
+  display.print(targetAngle);
+  display.gotoXY(0, 2);
+  display.print("Pwr:");
+  display.print(turnPower);
+
+}
+
 void updateOdometry() {
 
   int16_t leftCounts = encoders.getCountsAndResetLeft();
@@ -566,7 +696,7 @@ void autonomousRoutine3() {
     currentPos = end;
     turnPID(180, false);
     currentAngle += 180;
-    
+
   }
 
   int sideLength = 500;
